@@ -1,0 +1,12 @@
+# Telegram session files — never commit decrypted sessions
+*.session
+*.session-journal
+
+# Stray scratch files
+a.txt
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/

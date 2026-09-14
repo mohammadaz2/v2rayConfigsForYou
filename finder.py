@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import os
 import re
 import json
 from datetime import datetime, timedelta
@@ -12,8 +13,13 @@ import pytz
 from pyrogram import Client as PyrogramClient, enums
 
 OUTPUT_FILE = "configs.txt"
+SUB_DIR = "sub"
+STATS_FILE = "stats.json"
 FORMAT_STRING = "Config | {number} / {total}"
 MAX_CONFIGS = 500  # Maximum number of configs to save
+
+VALIDATE_TIMEOUT = 5  # seconds per TCP connect test
+VALIDATE_CONCURRENCY = 50  # parallel connection tests
 
 DEFAULT_HEADER_CONFIG = "vless://93c34033-96f2-444a-8374-f5ff7fddd180@127.0.0.1:443?encryption=none&security=none&type=tcp#header"
 
@@ -278,6 +284,90 @@ def format_configs(configs, channels_scanned, emergency_configs, emergency_flags
 
     return formatted
 
+# --- Config validation (TCP liveness check) ---
+def extract_host_port(config_url):
+    """Extract (host, port) from any supported config protocol"""
+    try:
+        if config_url.startswith("vmess://"):
+            encoded = config_url[8:].split("#", 1)[0]
+            encoded += "=" * (-len(encoded) % 4)
+            data = json.loads(base64.b64decode(encoded).decode())
+            return data.get("add"), int(data.get("port"))
+
+        if config_url.startswith(("vless://", "trojan://")):
+            parsed = urlparse(config_url)
+            return parsed.hostname, parsed.port or 443
+
+        if config_url.startswith("ss://"):
+            pure = config_url[5:].split("#", 1)[0]
+            if "@" in pure:
+                # SIP002: ss://userinfo@host:port (userinfo may be base64)
+                addr = pure.rsplit("@", 1)[1]
+                host, port = addr.rsplit(":", 1)
+                return host, int(port)
+            # Legacy: ss://base64(method:password@host:port)
+            decoded = base64.b64decode(pure + "==").decode()
+            host, port = decoded.rsplit("@", 1)[1].rsplit(":", 1)
+            return host, int(port)
+
+    except Exception:
+        return None
+    return None
+
+
+async def is_alive(host, port, timeout=VALIDATE_TIMEOUT):
+    """TCP-connect liveness test for a config's server"""
+    try:
+        _, writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port), timeout=timeout
+        )
+        writer.close()
+        await writer.wait_closed()
+        return True
+    except Exception:
+        return False
+
+
+async def validate_configs(configs, label="configs"):
+    """Keep only configs whose server accepts a TCP connection"""
+    if not configs:
+        return []
+
+    sem = asyncio.Semaphore(VALIDATE_CONCURRENCY)
+    results = [False] * len(configs)
+
+    async def check(index, config):
+        host_port = extract_host_port(config)
+        if not host_port or not host_port[0] or not host_port[1]:
+            return
+        async with sem:
+            results[index] = await is_alive(host_port[0], host_port[1])
+
+    await asyncio.gather(*(check(i, c) for i, c in enumerate(configs)))
+
+    alive = [c for c, ok in zip(configs, results) if ok]
+    print(f"🩺 {label}: {len(alive)}/{len(configs)} alive (TCP check)")
+    return alive
+
+
+# --- Split subscriptions by protocol ---
+def write_protocol_subscriptions(configs):
+    """Write per-protocol subscription files into sub/"""
+    by_protocol = {"vless": [], "vmess": [], "trojan": [], "ss": []}
+    for config in configs:
+        for protocol in by_protocol:
+            if config.startswith(f"{protocol}://"):
+                by_protocol[protocol].append(config)
+                break
+
+    os.makedirs(SUB_DIR, exist_ok=True)
+    for protocol, protocol_configs in by_protocol.items():
+        path = os.path.join(SUB_DIR, f"{protocol}.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(protocol_configs))
+        print(f"📄 sub/{protocol}.txt: {len(protocol_configs)} configs")
+
+
 # --- Deduplication ---
 def parse_config_for_deduplication(config_url):
     try:
@@ -402,12 +492,34 @@ async def telegram_scan():
             print("❌ No configs found")
             return
 
+        # --- Validate configs (drop dead servers) ---
+        emergency_configs = await validate_configs(emergency_configs, "Emergency configs")
+        regular_configs = await validate_configs(regular_configs, "Regular configs")
+
+        if not regular_configs and not emergency_configs:
+            print("❌ No configs survived validation")
+            return
+
         formatted = format_configs(regular_configs, channels_scanned, emergency_configs, emergency_flags)
 
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             f.write("\n".join(formatted))
 
+        # --- Per-protocol subscription files ---
+        write_protocol_subscriptions(emergency_configs + regular_configs)
+
+        # --- Stats for the README badge (shields.io endpoint) ---
         total_configs = len(formatted)
+        stats = {
+            "schemaVersion": 1,
+            "label": "alive configs",
+            "message": str(total_configs),
+            "color": "brightgreen",
+            "namedLogo": "shield",
+        }
+        with open(STATS_FILE, "w", encoding="utf-8") as f:
+            json.dump(stats, f, ensure_ascii=False)
+
         emergency_count = len(emergency_configs) if emergency_configs else 0
         regular_count = len(regular_configs) if regular_configs else 0
         
