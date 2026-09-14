@@ -4,10 +4,7 @@ import os
 import re
 import json
 from datetime import datetime, timedelta
-from urllib.parse import unquote, urlparse, parse_qs
-import aiohttp
-import emoji
-
+from urllib.parse import urlparse, parse_qs
 import jdatetime
 import pytz
 from pyrogram import Client as PyrogramClient, enums
@@ -31,187 +28,9 @@ PATTERNS = [
     re.compile(r"trojan://[^ \n\"]+")
 ]
 
-# Emojis to exclude
-EXCLUDE_EMOJIS = ["📅", "📊", "📈", "📉", "📆", "🗓️", "📋", "📑"]
-
-# --- Helper function to check if a string contains excluded emojis ---
-def contains_excluded_emoji(text):
-    """Check if text contains any of the excluded emojis"""
-    # First unquote the text to decode URL-encoded characters
-    try:
-        decoded_text = unquote(text)
-    except:
-        decoded_text = text
-    
-    # Use emoji library for comprehensive detection
-    emoji_list = emoji.distinct_emoji_list(decoded_text)
-    for emoji_char in emoji_list:
-        if emoji_char in EXCLUDE_EMOJIS:
-            return True
-    return False
-
-# --- Extract flag from config name ---
-def extract_flag_from_config(config_url):
-    """Extract flag emoji from config name (fragment part)"""
-    try:
-        if "#" in config_url:
-            # Get the fragment part after #
-            fragment_encoded = config_url.split("#", 1)[1]
-            # URL decode the fragment
-            fragment = unquote(fragment_encoded)
-            
-            # Use emoji library for comprehensive emoji detection
-            emojis = emoji.distinct_emoji_list(fragment)
-            if emojis:
-                # Return first emoji as flag
-                return emojis[0]
-    except:
-        pass
-    return "🏴"  # Default flag if none found
-
-# --- Check if config contains "لطفا قبل اتصال" ---
-def contains_lotfan(config_url):
-    """Check if config name contains Persian text 'لطفا قبل اتصال'"""
-    try:
-        if "#" in config_url:
-            # Get the fragment part after #
-            fragment_encoded = config_url.split("#", 1)[1]
-            # URL decode the fragment
-            fragment = unquote(fragment_encoded)
-            
-            # Check if the decoded fragment contains the Persian text
-            if "لطفا قبل اتصال" in fragment:
-                return True
-    except:
-        pass
-    return False
-
-# --- Download subscription from URL ---
-async def download_subscription(url):
-    """Download and decode subscription from a URL"""
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-        
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=30),
-            headers=headers
-        ) as session:
-            async with session.get(url, ssl=False) as response:
-                if response.status == 200:
-                    content = await response.read()
-                    
-                    # Try to decode as base64
-                    try:
-                        # Remove any whitespace or newlines
-                        encoded_content = content.decode('utf-8').strip()
-                        # Add padding if needed
-                        padding_needed = len(encoded_content) % 4
-                        if padding_needed:
-                            encoded_content += '=' * (4 - padding_needed)
-                        
-                        decoded = base64.b64decode(encoded_content).decode('utf-8')
-                        # Split by lines and filter empty lines
-                        configs = [line.strip() for line in decoded.splitlines() if line.strip()]
-                        return configs
-                    except Exception as decode_error:
-                        # If not base64, try as plain text
-                        try:
-                            plain_text = content.decode('utf-8', errors='ignore')
-                            # Try to find configs in plain text
-                            configs = []
-                            for pattern in PATTERNS:
-                                for match in pattern.finditer(plain_text):
-                                    cfg = match.group(0).strip()
-                                    if cfg and cfg not in configs:
-                                        configs.append(cfg)
-                            
-                            if configs:
-                                return configs
-                            else:
-                                # If no patterns found, treat each line as a config
-                                configs = [line.strip() for line in plain_text.splitlines() if line.strip()]
-                                return configs
-                        except:
-                            print(f"Failed to decode subscription content")
-                            return []
-                else:
-                    print(f"Subscription request failed with status: {response.status}")
-                    return []
-    except aiohttp.ClientError as e:
-        print(f"Network error downloading subscription: {type(e).__name__}")
-        return []
-    except Exception as e:
-        print(f"Unexpected error downloading subscription: {type(e).__name__}")
-        return []
-
-# --- Process mohammadaz2 subscription ---
-async def process_mohammadaz2_subscription(client):
-    """Check last message from @mohammadaz2 and process if it's a subscription link"""
-    emergency_configs = []
-    emergency_flags = []
-    
-    try:
-        # Get the last message from @mohammadaz2
-        async for message in client.search_messages("@mohammadaz2", limit=1):
-            if not message.text:
-                return emergency_configs, emergency_flags
-                
-            text = message.text.strip()
-            
-            # Check if it's a URL
-            url_pattern = re.compile(r'https?://[^\s]+')
-            match = url_pattern.search(text)
-            
-            if match:
-                url = match.group(0)
-                print(f"Found subscription from @mohammadaz2")
-                
-                # Download configs from subscription
-                configs = await download_subscription(url)
-                
-                if configs:
-                    print(f"Downloaded {len(configs)} configs from subscription")
-                    
-                    # Process configs
-                    for i, config in enumerate(configs):
-                        if "#" in config:
-                            config_name_encoded = config.split("#", 1)[1]
-                            
-                            # Check if config contains excluded emoji (skip first config check only)
-                            if i == 0 and contains_excluded_emoji(config_name_encoded):
-                                # Skip this config if it's the first one with excluded emoji
-                                print(f"Skipping first config due to excluded emoji")
-                                continue
-                            
-                            # Check if config contains "لطفا قبل اتصال"
-                            if contains_lotfan(config):
-                                # Skip this config if it contains the Persian text
-                                print(f"Skipping config with 'لطفا قبل اتصال'")
-                                continue
-                            
-                            # Extract flag from original config (using URL decoding)
-                            flag = extract_flag_from_config(config)
-                            emergency_flags.append(flag)
-                            emergency_configs.append(config)
-                        else:
-                            # Add config without fragment
-                            emergency_flags.append("🏴")
-                            emergency_configs.append(config)
-                    
-                    print(f"Added {len(emergency_configs)} emergency configs (after filtering)")
-                else:
-                    print("No valid configs found in subscription")
-                
-    except Exception as e:
-        print(f"Error processing @mohammadaz2 subscription: {e}")
-    
-    return emergency_configs, emergency_flags
-
 # --- Format configs ---
-def format_configs(configs, channels_scanned, emergency_configs, emergency_flags):
-    if not configs and not emergency_configs:
+def format_configs(configs, channels_scanned):
+    if not configs:
         return []
 
     # --- Tehran time ---
@@ -261,19 +80,8 @@ def format_configs(configs, channels_scanned, emergency_configs, emergency_flags
     for h in headers:
         formatted.append(f"{header_base}#{h}")
 
-    # ---- EMERGENCY CONFIGS (without header) ----
-    if emergency_configs:
-        # Add emergency configs directly after headers
-        for config, flag in zip(emergency_configs, emergency_flags):
-            url_part = config.split("#", 1)[0]
-            # Format: EMERGENCY {flag} | @mohammadaz2
-            fragment = f"EMERGENCY {flag} | @mohammadaz2"
-            formatted.append(f"{url_part}#{fragment}")
-
     # ---- REGULAR CONFIGS (with numbers) ----
     if configs:
-        # Add separator only if we have both emergency and regular configs
-        
         total = len(configs)
         for i, config in enumerate(configs, start=1):
             url_part = config.split("#", 1)[0]
@@ -468,45 +276,27 @@ async def telegram_scan():
         print("Starting Telegram scan...")
         print(f"📊 Maximum configs to save: {MAX_CONFIGS}")
 
-        # Process @mohammadaz2 subscription first
-        emergency_configs, emergency_flags = await process_mohammadaz2_subscription(client)
-        
-        # Calculate remaining slots for regular configs
-        remaining_slots = MAX_CONFIGS - len(emergency_configs)
-        if remaining_slots <= 0:
-            print(f"⚠️ Emergency configs already reached/exceeded limit ({len(emergency_configs)} >= {MAX_CONFIGS})")
-            print("Skipping channel scan...")
-            regular_configs = []
-            channels_scanned = 0
-        else:
-            print(f"📡 Scanning channels for up to {remaining_slots} more configs...")
-            # Scan regular channels with limit
-            regular_configs, channels_scanned = await scan_channels(client)
-            
-            # Trim if we somehow exceeded the limit
-            if len(regular_configs) > remaining_slots:
-                regular_configs = regular_configs[:remaining_slots]
-                print(f"✂️ Trimmed regular configs to {remaining_slots} to stay under limit")
+        print(f"📡 Scanning channels for up to {MAX_CONFIGS} configs...")
+        regular_configs, channels_scanned = await scan_channels(client)
 
-        if not regular_configs and not emergency_configs:
+        if not regular_configs:
             print("❌ No configs found")
             return
 
         # --- Validate configs (drop dead servers) ---
-        emergency_configs = await validate_configs(emergency_configs, "Emergency configs")
         regular_configs = await validate_configs(regular_configs, "Regular configs")
 
-        if not regular_configs and not emergency_configs:
+        if not regular_configs:
             print("❌ No configs survived validation")
             return
 
-        formatted = format_configs(regular_configs, channels_scanned, emergency_configs, emergency_flags)
+        formatted = format_configs(regular_configs, channels_scanned)
 
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             f.write("\n".join(formatted))
 
         # --- Per-protocol subscription files ---
-        write_protocol_subscriptions(emergency_configs + regular_configs)
+        write_protocol_subscriptions(regular_configs)
 
         # --- Stats for the README badge (shields.io endpoint) ---
         total_configs = len(formatted)
@@ -520,15 +310,12 @@ async def telegram_scan():
         with open(STATS_FILE, "w", encoding="utf-8") as f:
             json.dump(stats, f, ensure_ascii=False)
 
-        emergency_count = len(emergency_configs) if emergency_configs else 0
-        regular_count = len(regular_configs) if regular_configs else 0
-        
+        regular_count = len(regular_configs)
+
         print(f"\n✅ Saved {total_configs} configs to {OUTPUT_FILE}")
-        if emergency_count > 0:
-            print(f"🚨 Added {emergency_count} emergency configs from @mohammadaz2")
         if regular_count > 0:
             print(f"📡 Added {regular_count} regular configs from channel scan")
-        
+
         if total_configs >= MAX_CONFIGS:
             print(f"⚠️ Reached maximum config limit ({MAX_CONFIGS})")
 

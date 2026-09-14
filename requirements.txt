@@ -1,7 +1,4 @@
 kurigram==2.2.26
 tgcrypto==1.2.5
-requests==2.34.2
 jdatetime==6.1.0
 pytz==2026.3.post1
-aiohttp==3.14.3
-emoji==2.15.0
