@@ -1,3 +1,4 @@
+trojan://PD07395842@true-pony.rooster465.autos:443?security=tls#%F0%9F%87%A6%F0%9F%87%BA175139%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
 trojan://SyOxpKxC8u5jgNa3DCZ34y3D9CRenFcaABpYATEeqI2RSaXD76zS8YF0Owl3lZ@219.76.13.181:443?security=tls&sni=arbettp.freetrade.link#%F0%9F%87%AD%F0%9F%87%B0175137%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
 trojan://humanity@185.225.68.232:443?path=%2Fassignment&security=tls&insecure=0&host=www.calmlunch.com&type=ws&allowInsecure=0&sni=www.calmlunch.com#%F0%9F%87%AD%F0%9F%87%BA175057%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
 trojan://humanity@104.16.73.213:443?path=%2Fassignment&security=tls&insecure=0&host=www.ignitelimit.com&type=ws&allowInsecure=0&sni=www.ignitelimit.com#%F0%9F%87%A8%F0%9F%87%A6175059%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
