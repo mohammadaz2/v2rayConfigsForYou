@@ -1,3 +1,8 @@
+trojan://CF68213490@united-molly.rooster465.autos:443?security=tls#%F0%9F%87%B8%F0%9F%87%AC178725%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
+trojan://CF68213490@funny-hen.rooster465.autos:443?security=tls#%F0%9F%87%B0%F0%9F%87%B7178726%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
+trojan://CF68213490@pure-ram.rooster465.autos:443?security=tls#%F0%9F%87%B8%F0%9F%87%AC178727%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
+trojan://98b419ef-83a2-4d1b-a23d-566b7f24477b@nnnmjju.131.pp.ua:443?security=tls#%F0%9F%87%AB%F0%9F%87%AE178728%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
+trojan://XG59623478@classic-duckling.rooster465.autos:443?security=tls#%F0%9F%87%B8%F0%9F%87%AC178729%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
 trojan://LcICDcp%21jD9TFV$NbH@dl2uf-ivdezilz3e86rk18.hhvt37tjm2xbosql5hxogn-y.workers.dev:443?alpn=http%2F1.1&ed=2560&eh=Sec-WebSocket-Protocol&host=dl2uf-ivdezilz3e86rk18.hhvt37tjm2xbosql5hxogn-y.workers.dev&path=%2Ftr%2Fpg4wM48V9O859nmqsJg22EOFKN4S570y&sni=dl2uF-iVdeZILZ3E86rK18.Hhvt37tjm2XBOsQL5HXogN-Y.woRKERS.dEv&type=ws#%F0%9F%87%A8%F0%9F%87%A6178665%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
 trojan://Km%2FpIG4AGCjCOiGWj5FsWA==@node8.quaxly.com:25040?security=tls&sni=%2Fgay-anal&alpn=http/1.1&fp=android&type=ws&path=/node8.quaxly.com#%F0%9F%87%A9%F0%9F%87%AA178642%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
 trojan://MiTIVPN@167.82.76.7:443?security=tls&alpn=http%2F1.1&insecure=0&host=mitivpn---ss--s---mitivpn-33e.global.ssl.fastly.net&fp=chrome&type=ws&allowInsecure=0&sni=ssl.fastly.com#%F0%9F%87%BA%F0%9F%87%B8178600%20%7C%20%E2%9A%A1%EF%B8%8FTelegram%20%3D%20t.me%2FSOSkeyNET
